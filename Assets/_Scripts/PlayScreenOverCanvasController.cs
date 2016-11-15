@@ -16,57 +16,95 @@ public class PlayScreenOverCanvasController : MonoBehaviour {
 	public GameObject quitbutton;
 	public GameObject carddumpobject;
 
-	public GameObject testsizeandpostionbutton;
+	public static List<GameObject> unoplayerlist = new List<GameObject>();
+	public int totalplayers = 2;
+	public static int playerid = 0;
+	public static GameObject currentplayer;
+	public int currentplayerlocation = 0;
 
-	public static UnoCardScript currentdeckcard;
-	public int playerhandstacktotal = 0;
-	public static UnoPlayerScript currentplayer;
+	public bool isswitchingplayers = false;
+	public int playerrotationdirection  = 1;
+
+	public static GameObject currentdeckcard;
 	public static GameObject currentselectedcardasvisualbutton;
 
+	//public static Vector3[] oppositionlocationsonscreen;
+
+	// Debug test variables, does not need to be in final
+	public GameObject testsizeandpostionbutton;
 	public Vector2 sizedeltatest = new Vector2 (3f, 5f);
 	public Vector3 positiontest = new Vector3 (184f, -166.3f, 0.0f);
 	public bool istestingbuttonsizesandpositioning = false;
+	public bool istestingsomething = false;
+	// End of debug variables.
 
 	// Use this for initialization
 	void Start () {
 		Instance = this;
+		makePlayers ();
+		currentplayer = unoplayerlist[0];
 		unocardsprites = Resources.LoadAll<Sprite>("CardSpriteSheet");
-		UnoDeckScript.MakeDeck ();
 	}
 
 	// Update is called once per frame
 	void Update () {
-		//SwitchPlayers(UnoPlayerScript newplayerhand);
+		/*if(isswitchingplayers){
+			changeActivePlayer(playerrotationdirection);
+		}*/
+		if (istestingsomething) {
+			initialDrawSevenCardsForEachPlayer ();
+			istestingsomething = false;
+		}
 		if(istestingbuttonsizesandpositioning){
 			testsizeandpostionbutton.gameObject.GetComponent<RectTransform>().sizeDelta = sizedeltatest;
 			testsizeandpostionbutton.gameObject.GetComponent<RectTransform>().anchoredPosition3D = positiontest;
 		}
 	}
 
-	public void makeVisualofDeckCard(){
-		GameObject newcard = new GameObject("card");
-		newcard.layer = 5;
-		newcard.transform.SetParent(playerhandpanel.transform);
-		newcard.gameObject.AddComponent<RectTransform>();
-		newcard.gameObject.AddComponent<Button>();
-		newcard.AddComponent<Image>();
-		//newcard.gameObject.AddComponent<CanvasRenderer>();
-
-		newcard.GetComponent<Image>().sprite = UnoDeckScript.unodecklist[0].cardsprite;
-
-		newcard.gameObject.GetComponent<RectTransform>().anchorMin = new Vector2 ((float)(0.0 + 0.05*playerhandstacktotal), 0.0f);
-		newcard.gameObject.GetComponent<RectTransform>().anchorMax = new Vector2 ((float)(0.20 + 0.05*playerhandstacktotal), 1f);
-		playerhandstacktotal++;
-		newcard.gameObject.GetComponent<RectTransform>().sizeDelta = new Vector2 (0f, 0f);
-		newcard.gameObject.GetComponent<RectTransform>().localScale = new Vector3(1f, 1f, 1f);
-		newcard.gameObject.GetComponent<RectTransform>().anchoredPosition3D = new Vector3 (10.0f, 0.0f, 0.0f);
-
-		newcard.gameObject.GetComponent<Button>().onClick.AddListener( delegate {ActivateGameCardMenuAction(newcard);});
+	public void makePlayers(){
+		for(int i = 0; i < totalplayers; i++){
+			unoplayerlist.Add(helper.makePlayer (playerhandpanel));
+			playerid++;
+		}
+	}
+	//direction assumed to be either -1 or 1
+	public void changeActivePlayer(int direction){
+		currentplayerlocation = currentplayerlocation + direction;
+		if (currentplayerlocation >= totalplayers) {
+			currentplayerlocation = 0;
+		}
+		if (currentplayerlocation < 0) {
+			currentplayerlocation = totalplayers-1;
+		}
+		for (int i = 0; i < totalplayers; i++) {
+			unoplayerlist[i].SetActive(false);
+		}
+		currentplayer = unoplayerlist[currentplayerlocation];
+		currentplayer.SetActive(true);
+	}
+	public void initialDrawSevenCardsForEachPlayer(){
+		for(int i = 0; i < totalplayers; i++){
+			currentplayer = unoplayerlist[i];
+			for(int j = 0; j < 7; j++){
+				helper.editConceptualCardToVisual(UnoDeckScript.unodecklist[0], unoplayerlist[i], new Vector2 ((float)(0.0 + 0.05*unoplayerlist[i].GetComponent<UnoPlayerScript>().playerhandstacktotal), 0.0f), new Vector2 ((float)(0.20 + 0.05*unoplayerlist[i].GetComponent<UnoPlayerScript>().playerhandstacktotal), 1f), new Vector2 (0f, 0f), new Vector3(1f, 1f, 1f), new Vector3 (10.0f, 0.0f, 0.0f));
+				unoplayerlist[i].GetComponent<UnoPlayerScript>().playerhandstacktotal++;
+				UnoDeckScript.RemoveTopCardToPutItInTheCurrentPlayersHand();
+			}
+		}
+		currentplayer = unoplayerlist[0];
+	}
+	public void makePlayerOneActivePlayer(){
+		for (int i = 0; i < totalplayers; i++) {
+			unoplayerlist[i].SetActive(false);
+		}
+		currentplayer = unoplayerlist[0];
+		currentplayer.SetActive(true);
 	}
 
 	public void DrawCardAction() {
-		UnoDeckScript.RemoveTopCardAndPutItInTheCurrentPlayersHand();
-		makeVisualofDeckCard ();
+		helper.editConceptualCardToVisual(UnoDeckScript.unodecklist[0], currentplayer, new Vector2 ((float)(0.0 + 0.05*currentplayer.GetComponent<UnoPlayerScript>().playerhandstacktotal), 0.0f), new Vector2 ((float)(0.20 + 0.05*currentplayer.GetComponent<UnoPlayerScript>().playerhandstacktotal), 1f), new Vector2 (0f, 0f), new Vector3(1f, 1f, 1f), new Vector3 (10.0f, 0.0f, 0.0f));
+		currentplayer.GetComponent<UnoPlayerScript>().playerhandstacktotal++;
+		UnoDeckScript.RemoveTopCardToPutItInTheCurrentPlayersHand();
 	}
 
 	public void ActivateGameCardMenuAction(GameObject cardwiththisaction){
@@ -75,21 +113,16 @@ public class PlayScreenOverCanvasController : MonoBehaviour {
 	}
 
 	public void SendCardToDumpAction(){
-		//Debug.Log(this.gameObject.transform);
 		currentselectedcardasvisualbutton.transform.SetParent(carddumpobject.transform);
-		//currentselectedcardasvisualbutton.transform.SetParent(this.gameObject.transform);
 		currentselectedcardasvisualbutton.gameObject.GetComponent<RectTransform>().anchorMin = new Vector2 (0.5f, 0.5f);
 		currentselectedcardasvisualbutton.gameObject.GetComponent<RectTransform>().anchorMax = new Vector2 (0.5f,0.5f);
 		currentselectedcardasvisualbutton.gameObject.GetComponent<RectTransform>().sizeDelta = new Vector2 (60f, 100f);
 		currentselectedcardasvisualbutton.gameObject.GetComponent<RectTransform>().anchoredPosition3D = new Vector3 (0f, 0f, 0.0f);
-		//currentselectedcardasvisualbutton.gameObject.GetComponent<RectTransform>().localScale = new Vector3(1f, 1f, 1f);
 		gamecardmenu.SetActive (false);
-		playerhandstacktotal--;
+		currentplayer.GetComponent<UnoPlayerScript>().playerhandstacktotal--;
 		currentselectedcardasvisualbutton.gameObject.GetComponent<Button> ().enabled = false;
-	}
 
-	public void SwitchPlayers(UnoPlayerScript newplayerhand) {
-		
+		changeActivePlayer(playerrotationdirection);
 	}
 	//
 	public void QuitGameAction() {
